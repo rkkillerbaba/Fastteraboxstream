@@ -7,7 +7,7 @@ app = Flask(__name__)
 # ==========================================
 # 👇 YAHAN APNI TERABOX KI 'ndus' COOKIE DAALEIN 👇
 # ==========================================
-TERABOX_COOKIE = "ndus=YOUR_COOKIE_HERE;" 
+TERABOX_COOKIE = "ndus=YyPBtdPpeHuioBOotn8hQ5w5Fcp9crqvIgSHW7Ff,YVO1tdPpeHuiN1HVLQO2LnqhUPmEHx31cVFEnxWn,Y4LigdPpeHui9AKsyWNL2kMYNdetK21Gn4FhVtZG,YdQ_gdPpeHuiXw3lGYMzhpdy-L6POF9LLJBO2g73,YTingdPpeHui4OFlXqmaqITT0jZy2fQDDvnzWhHW,YQjXEdPpeHuiHz90KEylZx5-isZY8hVt_p38M2rz" 
 
 def extract_surl(url):
     # Regex jo kisi bhi domain se /s/ ke aage ka code nikal lega
