@@ -30,7 +30,7 @@ def extract_surl(url):
     return None
 
 # ==========================================
-# FRONTEND UI (Same UI code)
+# FRONTEND UI (Same UI code with Debug alert)
 # ==========================================
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -48,9 +48,10 @@ HTML_TEMPLATE = """
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #playerArea { transition: max-height 0.4s ease-out; max-height: 0; overflow: hidden; }
         #playerArea.show { max-height: 500px; }
+        #debugBox { display: none; }
     </style>
 </head>
-<body class="flex items-center justify-center p-4">
+<body class="flex flex-col items-center justify-center p-4">
     <div class="glass-card w-full max-w-lg p-8">
         <div class="text-center mb-8 flex flex-col items-center">
              <i class="fa-solid fa-cloud-arrow-down text-5xl text-blue-500 mb-3"></i>
@@ -65,6 +66,9 @@ HTML_TEMPLATE = """
         </div>
         <div id="resultBox" class="mt-8 hidden space-y-4">
             <div id="errorMsg" class="hidden bg-red-500 text-white p-4 rounded-xl text-sm mb-4"></div>
+            
+            <div id="debugBox" class="hidden bg-yellow-600 text-white p-4 rounded-xl text-xs mb-4 overflow-x-auto"></div>
+
             <div id="successBox" class="hidden space-y-4">
                 <div class="bg-gray-900 p-4 rounded-xl border border-gray-700">
                     <p class="text-xs text-gray-400 mb-1">File Name:</p>
@@ -95,19 +99,29 @@ HTML_TEMPLATE = """
             const resultBox = document.getElementById('resultBox');
             const errorMsg = document.getElementById('errorMsg');
             const successBox = document.getElementById('successBox');
+            const debugBox = document.getElementById('debugBox');
+
             if(!urlInput) { alert("Please enter a TeraBox link!"); return; }
             spinner.style.display = 'block'; btn.disabled = true;
-            resultBox.classList.remove('hidden'); errorMsg.classList.add('hidden'); successBox.classList.add('hidden');
+            resultBox.classList.remove('hidden'); errorMsg.classList.add('hidden'); 
+            successBox.classList.add('hidden'); debugBox.classList.add('hidden');
             currentDirectLink = ""; document.getElementById('videoPlayer').pause(); document.getElementById('playerArea').classList.add('hidden'); document.getElementById('playText').innerText = "Watch Here";
             
             try {
                 const response = await fetch(`/api/play?url=${encodeURIComponent(urlInput)}`);
                 const data = await response.json();
+                
                 if(response.ok && data.status === 'success') {
                     document.getElementById('fileName').innerText = data.filename;
                     document.getElementById('downloadBtn').href = data.direct_play_link;
                     currentDirectLink = data.direct_play_link; 
                     successBox.classList.remove('hidden');
+                } else if(data.debug_data) {
+                    // Yahan hum raw data screen par print kar rahe hain
+                    debugBox.innerText = "Debug Info: " + JSON.stringify(data.debug_data, null, 2);
+                    debugBox.style.display = "block";
+                    errorMsg.innerText = "File mili, par link missing hai. Niche wala yellow text bhej do!";
+                    errorMsg.classList.remove('hidden');
                 } else {
                     errorMsg.innerText = data.error || "Failed to extract link.";
                     errorMsg.classList.remove('hidden');
@@ -162,16 +176,13 @@ def get_stream_link():
 
     chosen_cookie = random.choice(TERABOX_COOKIES_LIST)
 
-    # 🔥 YAHAN MAIN MAGIC HAI - MOBILE HEADERS 🔥
-    # Hum TeraBox ko bata rahe hain ki ye request ek mobile app se aayi hai, PC se nahi.
+    # 🔄 WAPAS DESKTOP HEADERS PAR 🔄 (Taaki server block na kare)
     headers = {
-        'User-Agent': 'dubox;4.15.10;moto+g62+5G;android-android;13;JSbridge1.0.10;jointbridge;1.1.39;',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
         'Cookie': chosen_cookie,
-        'Accept': '*/*',
-        'Connection': 'keep-alive'
+        'Accept': 'application/json, text/plain, */*'
     }
 
-    # app_id 250528 (Dubox mobile app ID) ensures premium link response
     api_url = f"https://www.terabox.com/share/list?app_id=250528&shorturl={surl}&root=1"
     
     try:
@@ -183,11 +194,11 @@ def get_stream_link():
             dlink = file_info.get('dlink')
             filename = file_info.get('server_filename')
             
-            # Agar TeraBox ne phir bhi link chupa li (dlink null hai)
+            # Agar TeraBox ne dlink chupa li, toh hum poora kachha data frontend pe bhejenge
             if not dlink:
                 return jsonify({
-                    "error": f"TeraBox ne file ('{filename}') dhund li, par direct link block kar di hai. Ho sakta hai aapki cookies purani ho gayi hain ya premium file hai.",
-                    "details": data
+                    "error": "dlink missing",
+                    "debug_data": file_info
                 }), 403
 
             return jsonify({
